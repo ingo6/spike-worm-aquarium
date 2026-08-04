@@ -1,0 +1,101 @@
+<meta charset="utf-8">
+<title>Verlauf — bewegt sich das Gen?</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{ --grund:#161310; --boden:#0e0c0a; --tinte:#ece5d8; --leise:#9a8f7d; --linie:#2a2521; --erde:#9caf66; --live:#5fd08a; --warm:#f0a24a; --kalt:#5bb6dd; }
+@media (prefers-color-scheme: light){ :root{ --grund:#f3efe6; --boden:#faf7ef; --tinte:#2b2620; --leise:#6f6656; --linie:#ddd4c4; --erde:#7d8f4e; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--grund);color:var(--tinte);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+.wrap{max-width:760px;margin:0 auto;padding:22px 18px 50px;}
+.eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--leise);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--live);animation:p 2s infinite;}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,208,138,0)}100%{box-shadow:0 0 0 0 rgba(95,208,138,0)}}
+h1{font-size:23px;margin:0 0 4px;font-weight:650;}
+.sub{color:var(--leise);font-size:14px;max-width:64ch;margin:0 0 16px;}
+.urteil{background:var(--boden);border:1px solid var(--linie);border-radius:12px;padding:16px 18px;margin-bottom:16px;}
+.urteil .gross{font-size:20px;font-weight:700;margin:2px 0 6px;}
+.urteil .warum{font-size:13.5px;color:var(--leise);}
+.badge{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.fest{background:color-mix(in srgb,var(--kalt) 22%,var(--boden));color:var(--kalt);}
+.beweg{background:color-mix(in srgb,var(--erde) 24%,var(--boden));color:var(--erde);}
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.karte{background:var(--boden);border:1px solid var(--linie);border-radius:10px;padding:12px;}
+.karte .t{font-size:12.5px;color:var(--leise);}
+.karte .v{font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:700;color:var(--tinte);margin:1px 0 6px;}
+.karte .rng{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--leise);margin-top:4px;}
+.karte canvas{width:100%;height:44px;display:block;}
+.fuss{margin-top:18px;font-size:12.5px;color:var(--leise);border-top:1px solid var(--linie);padding-top:12px;max-width:64ch;} a{color:var(--erde);}
+</style>
+<div class="wrap">
+  <div class="eyebrow"><span class="pulse"></span> live · verlauf · <span id="stand">verbinde…</span></div>
+  <h1>Bewegt sich das Gen?</h1>
+  <p class="sub">Die gesammelten Werte über Zeit (aus <code>stats.tsv</code>). Die eine Frage: wandert das <b>Sozial-Gen</b> — dann haben die Würmer ihr Maß an Geselligkeit <b>gelernt</b> — oder liegt es fest?</p>
+  <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:0 0 12px;">🐛 <a href="index.html">Aquarium</a> · <a href="ein_wurm.html">ein Wurm</a> · <a href="landkarte.html">Spuren klein</a> · <a href="landkarte_gross.html">Spuren groß</a> · <b>Verlauf</b></p>
+  <div class="urteil">
+    <div class="t" style="font-size:12.5px;color:var(--leise)">SOZIAL-GEN (soz_gen)</div>
+    <div class="gross" id="urteil">…</div>
+    <div class="warum" id="warum"></div>
+  </div>
+  <div class="karten" id="karten"></div>
+  <p class="fuss"><b>Wichtig:</b> Das Gen ändert sich <b>nur bei der Auslese</b> (ein Wurm verhungert → ein Überlebender vererbt sein Gen + kleine Mutation). Kein Tod = kein neues Gen = es kann sich gar nicht bewegen. Bewegung braucht also <b>Auslese-Druck</b>. <a href="index.html">← Aquarium</a></p>
+</div>
+<script>
+const cs=getComputedStyle(document.documentElement); const col=n=>cs.getPropertyValue(n).trim();
+const SPALTEN=[
+  {key:'soz_gen', label:'Sozial-Gen (soll wandern)', d:3},
+  {key:'spar_gen', label:'Spar-Gen', d:3},
+  {key:'tote', label:'Tote (Auslese-Druck)', d:0},
+  {key:'begegnungen', label:'Begegnungen (Treffen/Trennen)', d:0},
+  {key:'sparen_eintritte', label:'Sparen-Eintritte (Hunger echt?)', d:0},
+  {key:'fressrate', label:'Fressrate', d:2},
+];
+let ROWS=[], KARTE={};
+function baue(){ const k=document.getElementById('karten');
+  for(const s of SPALTEN){ const d=document.createElement('div'); d.className='karte';
+    d.innerHTML='<div class="t">'+s.label+'</div><div class="v" id="v_'+s.key+'">–</div><canvas id="c_'+s.key+'" width="240" height="44"></canvas><div class="rng" id="r_'+s.key+'"></div>';
+    k.appendChild(d); KARTE[s.key]=document.getElementById('c_'+s.key).getContext('2d'); } }
+function spark(ctx,vals,farbe){
+  const W=240,H=44,pad=4; ctx.clearRect(0,0,W,H);
+  if(vals.length<2) return;
+  const mn=Math.min(...vals), mx=Math.max(...vals), sp=(mx-mn)||1;
+  ctx.strokeStyle=farbe; ctx.lineWidth=1.6; ctx.lineJoin='round'; ctx.beginPath();
+  vals.forEach((v,i)=>{ const x=pad+(W-2*pad)*i/(vals.length-1), y=H-pad-(H-2*pad)*(v-mn)/sp; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  const lx=W-pad, ly=H-pad-(H-2*pad)*(vals[vals.length-1]-mn)/sp;
+  ctx.fillStyle=farbe; ctx.beginPath(); ctx.arc(lx,ly,2.6,0,7); ctx.fill();
+}
+async function poll(){ try{
+    const r=await fetch('stats.tsv?_='+Date.now(),{cache:'no-store'}); const t=await r.text();
+    const lines=t.trim().split('\n'); const head=lines[0].split('\t');
+    const idx={}; head.forEach((h,i)=>idx[h]=i);
+    ROWS=lines.slice(1).map(l=>{ const c=l.split('\t'); const o={}; for(const h in idx) o[h]=c[idx[h]]; return o; });
+    document.getElementById('stand').textContent='verbunden · '+ROWS.length+' Fenster';
+    zeichne();
+  }catch(e){ document.getElementById('stand').textContent='keine stats.tsv'; } }
+function zeichne(){
+  if(!ROWS.length) return;
+  for(const s of SPALTEN){ const vals=ROWS.map(r=>parseFloat(r[s.key])).filter(v=>!isNaN(v));
+    if(!vals.length) continue;
+    const last=vals[vals.length-1], mn=Math.min(...vals), mx=Math.max(...vals);
+    document.getElementById('v_'+s.key).textContent=last.toFixed(s.d);
+    document.getElementById('r_'+s.key).textContent='min '+mn.toFixed(s.d)+' · max '+mx.toFixed(s.d)+' · '+vals.length+' Fenster';
+    spark(KARTE[s.key], vals, col('--warm'));
+  }
+  // Urteil ueber soz_gen (letzte bis zu 12 Fenster)
+  const sg=ROWS.map(r=>parseFloat(r['soz_gen'])).filter(v=>!isNaN(v)).slice(-12);
+  const tote=ROWS.map(r=>parseFloat(r['tote'])).filter(v=>!isNaN(v)).slice(-12);
+  const el=document.getElementById('urteil'), wr=document.getElementById('warum');
+  if(sg.length<2){ el.textContent='… zu wenig Daten'; return; }
+  const spanne=Math.max(...sg)-Math.min(...sg);
+  const todDelta=(tote.length>1)?(tote[tote.length-1]-tote[0]):0;
+  if(spanne<0.01){ el.innerHTML='<span class="badge fest">LIEGT FEST</span> &nbsp;'+sg[sg.length-1].toFixed(3);
+    wr.textContent = todDelta<1 ? 'Es bewegt sich nicht — und der Grund steht daneben: in dem Zeitraum sind '+todDelta+' Würmer gestorben. Ohne Auslese kann das Gen sich gar nicht ändern. Braucht mehr Hunger/Druck.' : 'Trotz '+todDelta+' Toden kaum Bewegung — die Auslese wählt bisher kein anderes Maß.';
+  } else { el.innerHTML='<span class="badge beweg">BEWEGT SICH</span> &nbsp;'+Math.min(...sg).toFixed(3)+' → '+sg[sg.length-1].toFixed(3);
+    wr.textContent='Es wandert (Spanne '+spanne.toFixed(3)+') über '+todDelta+' Tode — die Auslese lernt gerade ein Maß an Geselligkeit.';
+  }
+}
+baue();
+(async()=>{ await poll(); setInterval(poll,30000); })();
+</script>

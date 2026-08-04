@@ -1,0 +1,85 @@
+<meta charset="utf-8">
+<title>Spuren-Landkarte — große Würmer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{ --grund:#161310; --boden:#0e0c0a; --tinte:#ece5d8; --leise:#9a8f7d; --linie:#2a2521; --erde:#9caf66; --live:#5fd08a; }
+@media (prefers-color-scheme: light){ :root{ --grund:#f3efe6; --boden:#faf7ef; --tinte:#2b2620; --leise:#6f6656; --linie:#ddd4c4; --erde:#7d8f4e; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--grund);color:var(--tinte);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+.wrap{max-width:760px;margin:0 auto;padding:22px 18px 50px;}
+.eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--leise);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--live);animation:p 2s infinite;}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,208,138,0)}100%{box-shadow:0 0 0 0 rgba(95,208,138,0)}}
+h1{font-size:23px;margin:0 0 4px;font-weight:650;}
+.sub{color:var(--leise);font-size:14px;max-width:62ch;margin:0 0 14px;}
+.regler{display:flex;gap:10px;align-items:center;margin:0 0 14px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--leise);}
+.regler button{font-family:inherit;font-size:12.5px;padding:5px 10px;border-radius:7px;border:1px solid var(--linie);background:var(--boden);color:var(--leise);cursor:pointer;}
+.gitter{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.gitter figure{margin:0;background:var(--boden);border:1px solid var(--linie);border-radius:10px;padding:9px;}
+.gitter canvas{width:100%;height:auto;display:block;border-radius:6px;background:var(--boden);}
+.gitter figcaption{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--leise);margin-top:6px;display:flex;justify-content:space-between;}
+.gitter figcaption b{color:var(--tinte);font-weight:650;}
+.fuss{margin-top:18px;font-size:12.5px;color:var(--leise);border-top:1px solid var(--linie);padding-top:12px;max-width:64ch;} a{color:var(--erde);}
+@media(max-width:560px){.gitter{grid-template-columns:1fr;}}
+</style>
+<div class="wrap">
+  <div class="eyebrow"><span class="pulse"></span> live · spuren groß · <span id="stand">verbinde…</span></div>
+  <h1>Spuren-Landkarte — 8 große Würmer</h1>
+  <p class="sub">Jeder große Wurm lebt in <b>seiner eigenen</b> 50×50-Welt — darum 8 einzelne Karten. Jede zeigt, wo <b>dieser eine</b> überall war (Spur sammelt sich an), Kopf mit Zahl = <b>wg0…wg7</b>, dazu sein <b>gain</b> (wie gut er die Nase gelernt hat). So sieht man, ob er zielstrebig zum Futter zieht oder noch irrt.</p>
+  <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:0 0 12px;">🐛 <a href="index.html">Aquarium</a> · <a href="ein_wurm.html">ein Wurm</a> · <a href="landkarte.html">Spuren klein</a> · <b>Spuren groß</b> · <a href="verlauf.html">Verlauf</a></p>
+  <div class="regler"><button id="clear">Spuren löschen</button> <span id="info">–</span></div>
+  <div class="gitter" id="gitter"></div>
+  <p class="fuss"><b>Wie lesen:</b> Eine Linie ist der ganze bisher gelaufene Weg. Enge Knäuel = er sitzt am Futter; lange Fäden = er sucht. <a href="landkarte.html">← kleine Würmer</a> · <a href="index.html">Aquarium</a></p>
+</div>
+<script>
+const FARB=['#f0a24a','#5bb6dd','#7fd0a0','#e08fb0','#b6a6e0','#d9c46f','#8fd0e0','#e0956f'];
+let CTX=[], HIST=[[],[],[],[],[],[],[],[]], SEEN=[-1,-1,-1,-1,-1,-1,-1,-1], SG=[], NEST=[], GAIN=[];
+const cs=getComputedStyle(document.documentElement); const col=n=>cs.getPropertyValue(n).trim();
+function bau(){ const g=document.getElementById('gitter');
+  for(let i=0;i<8;i++){ const fig=document.createElement('figure');
+    const cv=document.createElement('canvas'); cv.width=300; cv.height=300;
+    const cap=document.createElement('figcaption'); cap.innerHTML='<b>wg'+i+'</b><span id="cg'+i+'">–</span>';
+    fig.appendChild(cv); fig.appendChild(cap); g.appendChild(fig); CTX.push(cv.getContext('2d')); } }
+async function poll(){ let ok=0;
+  for(let i=0;i<8;i++){ try{
+    const r=await fetch('gross_'+i+'.json?_='+Date.now(),{cache:'no-store'}); const j=await r.json();
+    SG[i]=j.S; NEST[i]=j.nest; GAIN[i]=j.gain;
+    if(SEEN[i]!==j.t){
+      if(HIST[i].length===0 && Array.isArray(j.trail)) HIST[i]=j.trail.slice();  // Startspur aus mitgeliefertem Trail -> sofort ein Weg
+      HIST[i].push(j.p); if(HIST[i].length>1500) HIST[i].shift(); SEEN[i]=j.t; }
+    const el=document.getElementById('cg'+i); if(el) el.textContent=(j.gain!=null?'gain '+j.gain.toFixed(2):'–');
+    ok++;
+  }catch(e){} }
+  document.getElementById('stand').textContent= ok? 'verbunden':'keine Verbindung';
+  const total=HIST.reduce((a,h)=>a+h.length,0);
+  document.getElementById('info').textContent=total+' Spur-Punkte gesammelt';
+  draw();
+}
+function draw(){
+  for(let i=0;i<8;i++){ const ctx=CTX[i]; if(!ctx) continue;
+    const W=300,pad=10,S=SG[i]||50,sp=(W-2*pad)/S, fc=FARB[i];
+    ctx.fillStyle=col('--boden'); ctx.fillRect(0,0,W,W);
+    ctx.strokeStyle=col('--linie'); ctx.lineWidth=1; ctx.strokeRect(pad,pad,W-2*pad,W-2*pad);
+    ctx.globalAlpha=.5; for(let x=10;x<S;x+=10){ ctx.beginPath();ctx.moveTo(pad+x*sp,pad);ctx.lineTo(pad+x*sp,W-pad);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(pad,pad+x*sp);ctx.lineTo(W-pad,pad+x*sp);ctx.stroke(); } ctx.globalAlpha=1;
+    if(NEST[i]){ ctx.fillStyle=col('--erde'); ctx.globalAlpha=0.08; for(const n of NEST[i]){ ctx.beginPath();ctx.arc(pad+n[0]*sp,pad+n[1]*sp,sp*1.3,0,7);ctx.fill(); } ctx.globalAlpha=1; }
+    const h=HIST[i]; if(!h.length) continue;
+    ctx.strokeStyle=fc; ctx.lineWidth=1.4; ctx.lineJoin='round'; ctx.globalAlpha=.55;
+    ctx.beginPath(); let st=false,pv=null;
+    for(const p of h){ const x=pad+p[0]*sp,y=pad+p[1]*sp;
+      if(pv && Math.hypot(p[0]-pv[0],p[1]-pv[1])>8) st=false;
+      if(!st){ctx.moveTo(x,y);st=true;} else ctx.lineTo(x,y); pv=p; }
+    ctx.stroke(); ctx.globalAlpha=1;
+    const p=h[h.length-1], x=pad+p[0]*sp, y=pad+p[1]*sp, r=Math.max(10,sp*0.9);
+    ctx.beginPath(); ctx.fillStyle=fc; ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.lineWidth=1.4; ctx.strokeStyle=col('--boden'); ctx.stroke();
+    ctx.fillStyle='#151210'; ctx.font='800 '+Math.round(r*1.15)+'px ui-monospace,Menlo,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(i),x,y+0.5);
+  }
+}
+document.getElementById('clear').onclick=()=>{ HIST=[[],[],[],[],[],[],[],[]]; SEEN=[-1,-1,-1,-1,-1,-1,-1,-1]; draw(); };
+bau();
+(async()=>{ await poll(); setInterval(poll,1500); })();
+</script>

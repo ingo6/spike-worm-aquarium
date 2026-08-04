@@ -1,0 +1,86 @@
+<meta charset="utf-8">
+<title>Spuren-Landkarte</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{ --grund:#161310; --boden:#0e0c0a; --tinte:#ece5d8; --leise:#9a8f7d; --linie:#2a2521; --erde:#9caf66; --live:#5fd08a; }
+@media (prefers-color-scheme: light){ :root{ --grund:#f3efe6; --boden:#faf7ef; --tinte:#2b2620; --leise:#6f6656; --linie:#ddd4c4; --erde:#7d8f4e; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--grund);color:var(--tinte);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+.wrap{max-width:720px;margin:0 auto;padding:22px 18px 50px;}
+.eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--leise);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--live);animation:p 2s infinite;}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,208,138,0)}100%{box-shadow:0 0 0 0 rgba(95,208,138,0)}}
+h1{font-size:23px;margin:0 0 4px;font-weight:650;}
+.sub{color:var(--leise);font-size:14px;max-width:62ch;margin:0 0 14px;}
+.buehne{background:var(--boden);border:1px solid var(--linie);border-radius:12px;padding:14px;}
+canvas{width:100%;height:auto;display:block;border-radius:7px;background:var(--boden);}
+.regler{display:flex;gap:10px;align-items:center;margin-top:12px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--leise);}
+.regler button{font-family:inherit;font-size:12.5px;padding:5px 10px;border-radius:7px;border:1px solid var(--linie);background:var(--boden);color:var(--leise);cursor:pointer;}
+.leg{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px 14px;margin-top:14px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--leise);border-top:1px solid var(--linie);padding-top:12px;}
+.leg span{display:flex;align-items:center;gap:7px;}
+.leg i{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#111;flex:0 0 auto;}
+.fuss{margin-top:18px;font-size:12.5px;color:var(--leise);border-top:1px solid var(--linie);padding-top:12px;max-width:64ch;} a{color:var(--erde);}
+</style>
+<div class="wrap">
+  <div class="eyebrow"><span class="pulse"></span> live · spuren · <span id="stand">verbinde…</span></div>
+  <h1>Spuren-Landkarte</h1>
+  <p class="sub">Wo jeder Wurm <b>überall war</b> — die Spuren sammeln sich an, solange die Seite offen ist. Jeder Kopf trägt seine <b>Zahl (0–7 = wk0…wk7)</b>, damit man sieht <b>wer</b> das ist. Nicht vermuten — sehen: wer hängt am Futter-Tisch, wer zieht hungrig los.</p>
+  <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:0 0 12px;">🐛 <a href="index.html">Aquarium</a> · <a href="ein_wurm.html">ein Wurm</a> · <b>Spuren klein</b> · <a href="landkarte_gross.html">Spuren groß</a> · <a href="verlauf.html">Verlauf</a></p>
+  <div class="buehne">
+    <canvas id="c" width="680" height="680" aria-label="Spuren-Landkarte der Würmer"></canvas>
+    <div class="regler"><button id="clear">Spuren löschen</button> <span id="info">–</span></div>
+    <div class="leg" id="leg"></div>
+  </div>
+  <p class="fuss"><b>Wie lesen:</b> Eine Linie ist der gelaufene Weg eines Wurms (Farbe+Buchstabe = wer). Reißt sie ab und beginnt woanders: der Wurm ist verhungert und als neuer geboren (gleicher Buchstabe, neuer Start). <a href="index.html">← Aquarium</a> · <a href="ein_wurm.html">ein Wurm →</a> · <a href="landkarte_gross.html">große Würmer →</a></p>
+</div>
+<script>
+let S=30, NESTER=[], HIST=[[],[],[],[],[],[],[],[]], seenT=-1;
+const FARB=['#f0a24a','#5bb6dd','#7fd0a0','#e08fb0','#b6a6e0','#d9c46f','#8fd0e0','#e0956f'];
+const BUCH='01234567';
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const cs=getComputedStyle(document.documentElement); const col=n=>cs.getPropertyValue(n).trim();
+function baueLeg(){ const l=document.getElementById('leg');
+  for(let i=0;i<8;i++){ const s=document.createElement('span');
+    s.innerHTML='<i style="background:'+FARB[i]+'">'+BUCH[i]+'</i> wk'+i; l.appendChild(s); } }
+async function ladeErde(){ try{ const r=await fetch('erde.json?_='+Date.now(),{cache:'no-store'}); const j=await r.json(); S=j.S; NESTER=j.nester; }catch(e){} }
+async function poll(){ try{
+    const r=await fetch('kino.jsonl?_='+Date.now(),{cache:'no-store'}); const t=await r.text();
+    const frames=t.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l));
+    let neu=0;
+    for(const f of frames){ if(f.t<=seenT) continue;
+      for(let i=0;i<f.w.length && i<8;i++){ HIST[i].push(f.w[i]); if(HIST[i].length>2000) HIST[i].shift(); }
+      seenT=f.t; neu++; }
+    document.getElementById('stand').textContent='verbunden';
+    const total=HIST.reduce((a,h)=>a+h.length,0);
+    document.getElementById('info').textContent='Runde '+seenT+' · '+total+' Spur-Punkte gesammelt';
+    draw();
+  }catch(e){ document.getElementById('stand').textContent='keine Verbindung'; } }
+function draw(){
+  const W=c.width,H=c.height,pad=26,sp=(W-2*pad)/S;
+  ctx.fillStyle=col('--boden'); ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=col('--linie'); ctx.lineWidth=1; ctx.strokeRect(pad,pad,S*sp,S*sp);
+  ctx.globalAlpha=.5; for(let g=5;g<S;g+=5){ ctx.beginPath();ctx.moveTo(pad+g*sp,pad);ctx.lineTo(pad+g*sp,pad+S*sp);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad,pad+g*sp);ctx.lineTo(pad+S*sp,pad+g*sp);ctx.stroke(); } ctx.globalAlpha=1;
+  ctx.fillStyle=col('--erde'); for(const n of NESTER){ if(n[3]<0.55) continue; ctx.globalAlpha=0.05+0.06*n[3];
+    ctx.beginPath(); ctx.arc(pad+n[0]*sp,pad+n[1]*sp,sp*0.85,0,7); ctx.fill(); } ctx.globalAlpha=1;
+  for(let i=0;i<8;i++){ const h=HIST[i]; if(!h.length) continue;
+    ctx.strokeStyle=FARB[i]; ctx.lineWidth=1.4; ctx.lineJoin='round'; ctx.globalAlpha=.5;
+    ctx.beginPath(); let st=false,pv=null;
+    for(const p of h){ const x=pad+p[0]*sp,y=pad+p[1]*sp;
+      if(pv && Math.hypot(p[0]-pv[0],p[1]-pv[1])>6) st=false;                 // Neugeburt -> Spur trennen
+      if(!st){ctx.moveTo(x,y);st=true;} else ctx.lineTo(x,y); pv=p; }
+    ctx.stroke(); ctx.globalAlpha=1;
+  }
+  for(let i=0;i<8;i++){ const h=HIST[i]; if(!h.length) continue;             // Köpfe mit Buchstaben zuletzt (oben drauf)
+    const p=h[h.length-1], x=pad+p[0]*sp, y=pad+p[1]*sp, r=Math.max(9,sp*0.5);
+    ctx.beginPath(); ctx.fillStyle=FARB[i]; ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.lineWidth=1.5; ctx.strokeStyle=col('--boden'); ctx.stroke();
+    ctx.fillStyle='#151210'; ctx.font='800 '+Math.round(r*1.25)+'px ui-monospace,Menlo,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(BUCH[i],x,y+0.5); }
+}
+document.getElementById('clear').onclick=()=>{ HIST=[[],[],[],[],[],[],[],[]]; seenT=-1; draw(); };
+baueLeg();
+(async()=>{ await ladeErde(); await poll(); setInterval(poll,1500); })();
+</script>

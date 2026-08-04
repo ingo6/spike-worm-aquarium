@@ -1,0 +1,143 @@
+<meta charset="utf-8">
+<title>Ein Wurm — exakt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{ --grund:#161310; --boden:#0e0c0a; --tinte:#ece5d8; --leise:#9a8f7d; --linie:#2a2521;
+  --erde:#9caf66; --wurm:#f0a24a; --punkt:#e8d9b0; --live:#5fd08a; }
+@media (prefers-color-scheme: light){ :root{ --grund:#f3efe6; --boden:#faf7ef; --tinte:#2b2620; --leise:#6f6656;
+  --linie:#ddd4c4; --erde:#7d8f4e; --wurm:#c8792a; --punkt:#5b5241; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--grund);color:var(--tinte);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;}
+.wrap{max-width:720px;margin:0 auto;padding:22px 18px 50px;}
+.eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--leise);
+  display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--live);animation:p 2s infinite;}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,208,138,0)}100%{box-shadow:0 0 0 0 rgba(95,208,138,0)}}
+h1{font-size:23px;margin:0 0 4px;font-weight:650;}
+.sub{color:var(--leise);font-size:14px;max-width:60ch;margin:0 0 14px;}
+.waehl{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.waehl button{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;padding:5px 9px;border-radius:7px;
+  border:1px solid var(--linie);background:var(--boden);color:var(--leise);cursor:pointer;}
+.waehl button.an{border-color:var(--wurm);color:var(--tinte);background:color-mix(in srgb,var(--wurm) 16%,var(--boden));}
+.buehne{background:var(--boden);border:1px solid var(--linie);border-radius:12px;padding:14px;}
+canvas{width:100%;height:auto;display:block;border-radius:7px;background:var(--boden);}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 20px;margin-top:14px;
+  font-family:ui-monospace,Menlo,monospace;font-size:13px;font-variant-numeric:tabular-nums;color:var(--leise);}
+.zahlen b{color:var(--tinte);font-weight:650;}
+.fuss{margin-top:18px;font-size:12.5px;color:var(--leise);border-top:1px solid var(--linie);padding-top:12px;max-width:64ch;}
+.fuss b{color:var(--tinte);font-weight:600;} a{color:var(--wurm);}
+</style>
+<div class="wrap">
+  <div class="eyebrow"><span class="pulse"></span> live · exakt · <span id="stand">verbinde…</span></div>
+  <h1>Ein Wurm — exakt genau</h1>
+  <p class="sub"><b id="erkl">1:1 exakt:</b> <span id="erklt">nur die echten geloggten Positionen, jeder Punkt = eine gerechnete Runde, nichts interpoliert. So langsam er kriecht, so langsam denkt er wirklich (~1 Runde/s).</span></p>
+  <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:0 0 12px;">🐛 <a href="index.html">Aquarium</a> · <b>ein Wurm</b> · <a href="landkarte.html">Spuren klein</a> · <a href="landkarte_gross.html">Spuren groß</a> · <a href="verlauf.html">Verlauf</a></p>
+  <div class="waehl" id="modus"></div>
+  <div class="waehl" id="waehl"></div>
+  <div class="buehne">
+    <canvas id="c" width="680" height="680"></canvas>
+    <div class="zahlen">
+      <span>Wurm <b id="nm">wk0</b></span>
+      <span>Position <b id="pos">–</b></span>
+      <span>Runde <b id="rd">–</b></span>
+      <span>letzter Schritt <b id="stp">–</b></span>
+      <span>Tempo <b id="rps">–</b></span>
+      <span id="upd">–</span>
+    </div>
+  </div>
+  <p class="fuss"><b>Wie lesen:</b> Der große Punkt ist die neueste echte Position. Die kleinen Punkte dahinter sind die vorherigen Runden — ihr Abstand ist der <b>wahre Schritt</b> pro Runde. Eng beieinander = langsam gedacht. <a href="index.html">← alle Würmer</a></p>
+</div>
+<script>
+let S=30, NESTER=[], FRAMES=[], WI=0, MODUS='exakt', ph=0, lastT=0, prevNewest=null, prevWall=0, rps=null;
+const LOOP_SEK=20;                                   // Player: ganze Aufnahme in ~20s Schleife (Zeitraffer)
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const cs=getComputedStyle(document.documentElement); const col=n=>cs.getPropertyValue(n).trim();
+const lerp=(a,b,f)=>a+(b-a)*f;
+function setErkl(){
+  const e=document.getElementById('erkl'), t=document.getElementById('erklt');
+  if(MODUS==='exakt'){ e.textContent='1:1 exakt · live:'; t.textContent='nur die echten geloggten Positionen, jeder Punkt = eine gerechnete Runde, nichts interpoliert. So langsam er kriecht, so langsam denkt er wirklich (~1 Runde/s).'; }
+  else{ e.textContent='Player · Zeitraffer-Schleife:'; t.textContent='die ganze Aufnahme im Schnelldurchlauf, immer wieder als Schleife. Kein Live — eine Wiedergabe der echten aufgezeichneten Bewegung, nur schneller, damit man den Fluss sieht.'; }
+}
+function knopf(txt,data,an,fn){ const b=document.createElement('button'); b.textContent=txt; for(const k in data)b.dataset[k]=data[k]; if(an)b.className='an'; b.onclick=fn; return b; }
+function baueModus(){ const m=document.getElementById('modus');
+  [['exakt','● Live 1:1'],['player','▶ Player (Schleife)']].forEach(([k,lab])=>{
+    m.appendChild(knopf(lab,{k},k===MODUS,()=>{ MODUS=k; ph=0; [...m.children].forEach(x=>x.className=x.dataset.k===MODUS?'an':''); setErkl(); })); }); }
+function baueWahl(){ const w=document.getElementById('waehl');
+  for(let i=0;i<8;i++) w.appendChild(knopf('wk'+i,{i},i===WI,e=>{ WI=+e.target.dataset.i; ph=0; [...w.children].forEach(x=>x.className=+x.dataset.i===WI?'an':''); })); }
+async function ladeErde(){ try{ const r=await fetch('erde.json?_='+Date.now(),{cache:'no-store'}); const j=await r.json(); S=j.S; NESTER=j.nester; }catch(e){} }
+async function poll(){ try{
+    const r=await fetch('kino.jsonl?_='+Date.now(),{cache:'no-store'}); const t=await r.text();
+    FRAMES=t.trim().split('\n').filter(Boolean).slice(-240).map(l=>JSON.parse(l));
+    document.getElementById('stand').textContent='verbunden';
+    if(FRAMES.length){ const nt=FRAMES[FRAMES.length-1].t, now=performance.now();
+      if(prevNewest!=null && now>prevWall){ const inst=(nt-prevNewest)/((now-prevWall)/1000);
+        if(isFinite(inst)&&inst>=0) rps = rps==null? inst : rps*0.7+inst*0.3; }
+      prevNewest=nt; prevWall=now;
+      document.getElementById('upd').textContent='aktualisiert '+new Date().toLocaleTimeString(); }
+  }catch(e){ document.getElementById('stand').textContent='keine Verbindung'; } }
+function welt(pad,sp){
+  const W=c.width,H=c.height;
+  ctx.fillStyle=col('--boden'); ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=col('--linie'); ctx.lineWidth=1; ctx.strokeRect(pad,pad,S*sp,S*sp);
+  ctx.globalAlpha=.5; for(let g=5;g<S;g+=5){ ctx.beginPath();ctx.moveTo(pad+g*sp,pad);ctx.lineTo(pad+g*sp,pad+S*sp);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad,pad+g*sp);ctx.lineTo(pad+S*sp,pad+g*sp);ctx.stroke(); } ctx.globalAlpha=1;
+  for(const n of NESTER){ ctx.fillStyle=col('--erde'); ctx.globalAlpha=0.05+0.10*(n[3]||.5);
+    ctx.beginPath(); ctx.arc(pad+n[0]*sp,pad+n[1]*sp,sp*1.7,0,7); ctx.fill(); } ctx.globalAlpha=1;
+}
+function kopf(hx,hy,hz,pad,sp){ const wc=col('--wurm'), tiefe=0.5+0.9*((hz||0)/S), r=sp*(0.30+0.34*tiefe);
+  ctx.globalAlpha=0.14; ctx.fillStyle=wc; ctx.beginPath(); ctx.arc(hx,hy,r*1.9,0,7); ctx.fill();
+  ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(hx,hy,r,0,7); ctx.fill();
+  ctx.lineWidth=1; ctx.strokeStyle=col('--boden'); ctx.stroke(); }
+function draw(){
+  const pad=26, sp=(c.width-2*pad)/S; welt(pad,sp);
+  const pts=[]; for(const f of FRAMES){ const w=f.w&&f.w[WI]; if(w) pts.push(w); }
+  document.getElementById('nm').textContent='wk'+WI;
+  if(!pts.length) return;
+  const wc=col('--wurm');
+  if(MODUS==='exakt'){
+    ctx.strokeStyle=wc; ctx.lineWidth=1.6; ctx.lineJoin='round'; ctx.globalAlpha=.55;
+    ctx.beginPath(); let stt=false,pv=null;
+    for(const p of pts){ const x=pad+p[0]*sp,y=pad+p[1]*sp;
+      if(pv && Math.hypot(p[0]-pv[0],p[1]-pv[1])>6) stt=false;
+      if(!stt){ctx.moveTo(x,y);stt=true;} else ctx.lineTo(x,y); pv=p; }
+    ctx.stroke(); ctx.globalAlpha=1;
+    ctx.fillStyle=col('--punkt');                    // jeder echte Punkt = eine gerechnete Runde
+    for(let i=Math.max(0,pts.length-40);i<pts.length-1;i++){ const p=pts[i];
+      ctx.globalAlpha=0.30+0.55*(i/(pts.length-1)); ctx.beginPath(); ctx.arc(pad+p[0]*sp,pad+p[1]*sp,2.4,0,7); ctx.fill(); }
+    ctx.globalAlpha=1;
+    const h=pts[pts.length-1]; kopf(pad+h[0]*sp,pad+h[1]*sp,h[2],pad,sp);
+    const f=FRAMES[FRAMES.length-1];
+    document.getElementById('pos').textContent=h[0].toFixed(1)+' · '+h[1].toFixed(1)+' · '+h[2].toFixed(1);
+    document.getElementById('rd').textContent=f.t;
+    let step='–'; if(pts.length>=2){ const a=pts[pts.length-2]; const d=Math.hypot(h[0]-a[0],h[1]-a[1],h[2]-a[2]); step=d<6?d.toFixed(2)+' Einh.':'neu geboren'; }
+    document.getElementById('stp').textContent=step;
+    document.getElementById('rps').textContent=(rps!=null? rps.toFixed(2)+' Runden/s':'…');
+  } else {
+    // PLAYER: Zeitraffer-Schleife durch die echten Punkte (interpoliert, schnell)
+    const n=pts.length, a=Math.min(Math.floor(ph),n-1), b=Math.min(a+1,n-1), f=ph-a;
+    const sprung=Math.hypot(pts[b][0]-pts[a][0],pts[b][1]-pts[a][1])>6;
+    const hx=sprung?pts[a][0]:lerp(pts[a][0],pts[b][0],f), hy=sprung?pts[a][1]:lerp(pts[a][1],pts[b][1],f), hz=sprung?pts[a][2]:lerp(pts[a][2],pts[b][2],f);
+    ctx.strokeStyle=wc; ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([9,5,2,5]);
+    ctx.beginPath(); let stt=false,pv=null;
+    for(let i=Math.max(0,a-9);i<=a;i++){ const p=pts[i]; const x=pad+p[0]*sp,y=pad+p[1]*sp;
+      if(pv && Math.hypot(p[0]-pv[0],p[1]-pv[1])>6) stt=false;
+      if(!stt){ctx.moveTo(x,y);stt=true;} else ctx.lineTo(x,y); pv=p; }
+    ctx.lineTo(pad+hx*sp,pad+hy*sp); ctx.stroke(); ctx.setLineDash([]);
+    kopf(pad+hx*sp,pad+hy*sp,hz,pad,sp);
+    const spanne=n>1?(pts[n-1]?FRAMES[FRAMES.length-1].t-FRAMES[0].t:0):0;
+    document.getElementById('pos').textContent=hx.toFixed(1)+' · '+hy.toFixed(1)+' · '+hz.toFixed(1)+'  (Replay)';
+    document.getElementById('rd').textContent='Replay '+Math.round((a/Math.max(1,n-1))*100)+'%';
+    document.getElementById('stp').textContent=n+' Runden aufgezeichnet';
+    document.getElementById('rps').textContent='Zeitraffer: '+Math.round(spanne)+' Runden in '+LOOP_SEK+'s';
+  }
+}
+function schleife(ts){
+  if(MODUS==='player' && FRAMES.length>1){ const dt=Math.min(0.1,(ts-lastT)/1000||0);
+    const n=FRAMES.length; ph += dt*(n/LOOP_SEK); if(ph>=n-1) ph=0; }
+  lastT=ts; draw(); requestAnimationFrame(schleife);
+}
+baueModus(); baueWahl(); setErkl();
+(async()=>{ await ladeErde(); await poll(); requestAnimationFrame(schleife); setInterval(poll, 1000); })();
+</script>
