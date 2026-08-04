@@ -1,0 +1,322 @@
+<meta charset="utf-8">
+<title>Wurm-Aquarium — LIVE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+:root{ --grund:#161310; --boden:#0e0c0a; --tinte:#ece5d8; --leise:#9a8f7d;
+  --linie:#2a2521; --erde:#9caf66; --jagen:#f0a24a; --sparen:#5bb6dd; --akzent:#9caf66; --karte:#1d1915; --live:#5fd08a; --gross:#6fc2b0; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--grund);color:var(--tinte);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:760px;margin:0 auto;padding:24px 20px 60px;}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--leise);
+  display:flex;align-items:center;gap:8px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--live);box-shadow:0 0 0 0 var(--live);animation:p 2s infinite;}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5)}70%{box-shadow:0 0 0 8px rgba(95,208,138,0)}100%{box-shadow:0 0 0 0 rgba(95,208,138,0)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+h1{font-size:26px;margin:0;font-weight:650;letter-spacing:-.01em;}
+.sub{color:var(--leise);font-size:14.5px;max-width:60ch;}
+.buehne{background:var(--boden);border:1px solid var(--linie);border-radius:12px;padding:14px;}
+canvas{width:100%;height:auto;display:block;border-radius:7px;background:var(--boden);}
+.zahlen{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:14px;font-family:ui-monospace,Menlo,monospace;
+  font-size:13px;font-variant-numeric:tabular-nums;color:var(--leise);}
+.zahlen b{color:var(--tinte);font-weight:650;}
+.regler{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--leise);}
+.regler input[type=range]{accent-color:var(--akzent);width:150px;max-width:40vw;}
+.regler #spd{color:var(--tinte);font-variant-numeric:tabular-nums;font-weight:650;}
+.regler .hint{opacity:.65;}
+.modusb{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;padding:5px 10px;border-radius:7px;border:1px solid var(--linie);background:var(--boden);color:var(--leise);cursor:pointer;}
+.modusb.an{border-color:var(--akzent);color:var(--tinte);background:color-mix(in srgb,var(--akzent) 16%,var(--boden));}
+.pausebar{margin-top:10px;padding:9px 12px;border-radius:8px;font-size:13px;line-height:1.4;
+  background:color-mix(in srgb,var(--jagen) 15%,var(--boden));border:1px solid color-mix(in srgb,var(--jagen) 45%,var(--linie));color:var(--tinte);}
+.pausebar b{color:var(--jagen);}
+.pulse.pause{background:var(--jagen)!important;animation:none;}
+.woerter{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:5px 22px;margin-top:14px;
+  font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--leise);font-variant-numeric:tabular-nums;
+  border-top:1px solid var(--linie);padding-top:14px;}
+.woerter .row{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+.woerter .nm{color:var(--tinte);width:30px;font-weight:650;}
+.woerter .wdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+.woerter .en{width:46px;height:6px;border-radius:3px;background:var(--linie);overflow:hidden;flex:0 0 auto;}
+.woerter .en i{display:block;height:100%;}
+.legende{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--leise);}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px;}
+.fuss{margin-top:22px;font-size:13px;color:var(--leise);border-top:1px solid var(--linie);padding-top:14px;max-width:64ch;}
+.fuss b{color:var(--tinte);font-weight:600;}
+.grossbox{margin-top:28px;}
+.gh{font-size:16px;font-weight:650;color:var(--tinte);margin:0 0 3px;}
+.gsub{font-size:13px;color:var(--leise);margin:0 0 12px;max-width:64ch;}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.mini figure{margin:0;background:var(--boden);border:1px solid var(--linie);border-radius:9px;padding:7px;}
+.mini canvas{width:100%;height:auto;display:block;border-radius:5px;background:var(--boden);}
+.mini figcaption{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--leise);margin-top:5px;display:flex;justify-content:space-between;gap:6px;}
+.mini figcaption b{color:var(--tinte);font-weight:650;}
+@media(max-width:560px){.mini{grid-template-columns:repeat(2,1fr);}}
+.mini figure{cursor:zoom-in;transition:border-color .15s;}
+.mini figure:hover{border-color:var(--gross);}
+.lupe{position:fixed;inset:0;background:rgba(0,0,0,.74);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;cursor:zoom-out;}
+.lupe[hidden]{display:none;}
+.lupe-box{background:var(--boden);border:1px solid var(--linie);border-radius:12px;padding:12px;max-width:min(92vw,600px);width:100%;cursor:default;}
+.lupe-box canvas{width:100%;height:auto;display:block;border-radius:7px;background:var(--boden);}
+.lupe-cap{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--leise);margin-top:9px;display:flex;gap:14px;align-items:center;}
+.lupe-cap b{color:var(--tinte);font-weight:650;}
+.lupe-x{margin-left:auto;color:var(--gross);cursor:pointer;}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><span class="pulse"></span> live · bluelionu · <span id="stand">verbinde…</span> · Seite geladen <span id="loadt">–</span></div>
+    <h1>Wurm-Aquarium</h1>
+    <p class="sub"><b>16 Würmer</b> live: <b>8 kleine</b> hier im gemeinsamen Aquarium + <b>8 große</b> in eigenen Welten (ganz unten scrollen). Echte Positionen, jetzt — lädt sich selbst nach. Kein Film, keine Schleife.</p>
+    <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:-2px 0 4px;">🐛 <b style="color:var(--tinte)">Aquarium</b> · <a href="ein_wurm.html" style="color:var(--akzent)">ein Wurm</a> · <a href="landkarte.html" style="color:var(--akzent)">Spuren klein</a> · <a href="landkarte_gross.html" style="color:var(--akzent)">Spuren groß</a> · <a href="verlauf.html" style="color:var(--akzent)">Verlauf</a></p>
+  </header>
+
+  <div class="buehne">
+    <canvas id="c" width="680" height="680" aria-label="Live-Draufsicht auf das Wurm-Aquarium"></canvas>
+    <div id="pause" class="pausebar" hidden></div>
+    <div class="regler">
+      <button id="mLive" class="modusb an">● Live 1:1</button>
+      <button id="mPlay" class="modusb">▶ Player (Zeitraffer)</button>
+      <span class="hint" id="modushint">echt ~1 Runde/s · <a href="ein_wurm.html" style="color:var(--akzent)">ein Wurm →</a> · <a href="landkarte.html" style="color:var(--akzent)">Spuren →</a> · <a href="verlauf.html" style="color:var(--akzent)">Verlauf →</a></span>
+    </div>
+    <div class="zahlen">
+      <span>Sim-Zeit <b id="ft">–</b></span>
+      <span>kleine <b id="fw">–</b>/8 · große 8 unten</span>
+      <span>am Jagen <b id="fj">–</b></span>
+      <span>am Sparen <b id="fs">–</b></span>
+      <span>gestorben+neu <b id="geb">–</b></span>
+      <span id="upd">–</span>
+    </div>
+    <div class="legende">
+      <span><span class="dot" style="background:var(--jagen)"></span>jagen</span>
+      <span><span class="dot" style="background:var(--sparen)"></span>sparen</span>
+      <span><span class="dot" style="background:var(--erde)"></span>Futter-Nester</span>
+    </div>
+    <div class="woerter" id="tabelle" aria-label="Werte je Wurm"></div>
+  </div>
+
+  <p class="fuss"><b>Wie lesen:</b> Jeder Wurm ist eine kleine <b>Schlange</b> — Strich-Punkt-Körper = seine Spur (Bewegungsachse), voller Punkt = Kopf. Draufsicht X/Y (0–30), Tiefe Z in der Kopfgröße. Reißt eine Spur ab und taucht woanders auf: verhungert und neu geboren (Auslese). Farbe = die zwei Formen aus echter Energie.</p>
+
+  <div class="grossbox">
+    <h2 class="gh">8 große Würmer — jeder in seiner eigenen Welt</h2>
+    <p class="gsub">Diese 8 leben <b>getrennt</b> (je 50×50, einer pro Welt) und lernen mit der <b>Nase</b> (gain). Kein gemeinsamer Raum mit den kleinen — darum je eine eigene Mini-Cam.</p>
+    <div class="mini" id="mini"></div>
+  </div>
+</div>
+
+<div id="lupe" class="lupe" hidden>
+  <div class="lupe-box">
+    <canvas id="lupeC" width="560" height="560" aria-label="Großansicht eines großen Wurms"></canvas>
+    <div class="lupe-cap"><b id="lupeNm">wg0</b> <span id="lupeGain">–</span>
+      <button id="lLive" class="modusb an">● Live</button>
+      <button id="lPlay" class="modusb">▶ Player</button>
+      <span class="lupe-x" id="lupeX">✕ schließen</span></div>
+  </div>
+</div>
+
+<script>
+let S=30, NESTER=[], FRAMES=[], playT=null, rate=8, last=0;
+let GROSS=[], MINI=[], zoomI=-1, lupeCtx=null, MODUS='live', lupeModus='live', lupePh=0;
+let netOk=true, lastNewestT=-1, lastAdvanceWall=0, lastPaused=null;   // Sicherheitsanker: erkennt Server-Pause
+const LOOP_SEK=20;                                    // Player: ganze Aufnahme als ~20s-Zeitraffer-Schleife
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const cs=getComputedStyle(document.documentElement);
+const col=n=>cs.getPropertyValue(n).trim();
+
+async function ladeErde(){
+  try{ const r=await fetch('erde.json?_='+Date.now(),{cache:'no-store'}); const j=await r.json(); S=j.S; NESTER=j.nester; }catch(e){}
+}
+async function poll(){
+  try{
+    const r=await fetch('kino.jsonl?_='+Date.now(),{cache:'no-store'}); const t=await r.text();
+    const lines=t.trim().split('\n').filter(Boolean);
+    const last=lines.slice(-120).map(l=>JSON.parse(l));
+    FRAMES=last; netOk=true;
+    if(FRAMES.length){ const nt=FRAMES[FRAMES.length-1].t;
+      if(nt>lastNewestT){ lastNewestT=nt; lastAdvanceWall=performance.now(); }   // neue Runden = Server lebt
+      document.getElementById('upd').textContent='aktualisiert '+new Date().toLocaleTimeString(); }
+  }catch(e){ netOk=false; }
+}
+const lerp=(x,y,f)=>x+(y-x)*f;
+function draw(){
+  if(!FRAMES.length) return;
+  let a=0,b=0,f=0;                                    // Abspielkopf über Sim-Zeit (playT) -> läuft an der Live-Kante weiter
+  if(playT!=null){
+    if(playT<=FRAMES[0].t){ a=0;b=0;f=0; }
+    else if(playT>=FRAMES[FRAMES.length-1].t){ a=b=FRAMES.length-1; f=0; }
+    else for(let i=0;i<FRAMES.length-1;i++){
+      if(playT<=FRAMES[i+1].t){ a=i;b=i+1; const s2=FRAMES[i+1].t-FRAMES[i].t||1; f=(playT-FRAMES[i].t)/s2; break; }
+    }
+  }
+  const W=c.width, H=c.height, pad=26, sp=(W-2*pad)/S;
+  ctx.fillStyle=col('--boden'); ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=col('--linie'); ctx.lineWidth=1; ctx.strokeRect(pad,pad,S*sp,S*sp);
+  ctx.globalAlpha=.5; for(let g=5;g<S;g+=5){ ctx.beginPath();ctx.moveTo(pad+g*sp,pad);ctx.lineTo(pad+g*sp,pad+S*sp);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad,pad+g*sp);ctx.lineTo(pad+S*sp,pad+g*sp);ctx.stroke(); } ctx.globalAlpha=1;
+  const erde=col('--erde');                            // Futter nur als dezenter Hinweis, nicht als Matsch
+  ctx.fillStyle=erde;
+  for(const n of NESTER){ if(n[3]<0.55) continue; ctx.globalAlpha=0.05+0.06*n[3];
+    ctx.beginPath(); ctx.arc(pad+n[0]*sp, pad+n[1]*sp, sp*0.85,0,7); ctx.fill(); }
+  ctx.globalAlpha=1;
+  const fa=FRAMES[a].w, fb=FRAMES[b].w; let jag=0,spr=0;
+  for(let wi=0; wi<fa.length; wi++){
+    const ha=fa[wi], hb=(fb[wi]||ha);
+    const sprung = Math.hypot(hb[0]-ha[0], hb[1]-ha[1]) > 6;           // Neugeburt -> nicht gleiten
+    const hx = sprung? ha[0] : lerp(ha[0],hb[0],f);
+    const hy = sprung? ha[1] : lerp(ha[1],hb[1],f);
+    const hz = sprung? ha[2] : lerp(ha[2],hb[2],f);
+    const form=ha[3], cc=form? col('--jagen'):col('--sparen'); if(form)jag++; else spr++;
+    // Körper = Spur (weich), Kopf = interpolierte Position
+    const trail=[]; for(let k=Math.max(0,a-7);k<=a;k++){ const w=FRAMES[k].w[wi]; if(w) trail.push([pad+w[0]*sp,pad+w[1]*sp]); }
+    trail.push([pad+hx*sp, pad+hy*sp]);
+    ctx.strokeStyle=cc; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([8,4,2,4]);
+    ctx.beginPath(); let st=false,prev=null;
+    for(const p of trail){ if(prev && Math.hypot(p[0]-prev[0],p[1]-prev[1])>sp*6) st=false;
+      if(!st){ctx.moveTo(p[0],p[1]);st=true;} else ctx.lineTo(p[0],p[1]); prev=p; }
+    ctx.stroke(); ctx.setLineDash([]);
+    const px=pad+hx*sp, py=pad+hy*sp, tiefe=0.5+0.9*(hz/S), r=Math.max(sp*(0.34+0.34*tiefe), 8);
+    ctx.globalAlpha=0.13; ctx.beginPath(); ctx.fillStyle=cc; ctx.arc(px,py,r*1.7,0,7); ctx.fill();
+    ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(px,py,r,0,7); ctx.fill();
+    ctx.lineWidth=1; ctx.strokeStyle=col('--boden'); ctx.stroke();
+    ctx.fillStyle='#151210'; ctx.font='800 '+Math.round(r*1.2)+'px ui-monospace,Menlo,monospace';  // Zahl in den Kopf gravieren = wkN
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(wi), px, py+0.5);
+  }
+  document.getElementById('ft').textContent=FRAMES[a].t;
+  document.getElementById('fw').textContent=fa.length;
+  document.getElementById('fj').textContent=jag;
+  document.getElementById('fs').textContent=spr;
+  document.getElementById('geb').textContent=(FRAMES[a].tot!=null? FRAMES[a].tot : '–');
+  let rows='';
+  for(let wi=0; wi<fa.length; wi++){
+    const ww=fa[wi], form=ww[3], en=(ww[4]!=null?ww[4]:1), gen=(ww[5]!=null?ww[5]:0);
+    const cc=form? col('--jagen'):col('--sparen');
+    rows+='<div class="row"><span class="wdot" style="background:'+cc+'"></span>'
+        + '<span class="nm">wk'+wi+'</span>'
+        + '<span class="en"><i style="width:'+Math.round(Math.min(1,en/1.5)*100)+'%;background:'+cc+'"></i></span>'
+        + '<span>Gen '+gen.toFixed(2)+'</span></div>';
+  }
+  document.getElementById('tabelle').innerHTML=rows;
+}
+// ---- 8 grosse Wuermer: eigene Mini-Cams (getrennte Welten) ----
+function baueMini(){ const m=document.getElementById('mini'); if(!m) return;
+  for(let i=0;i<8;i++){ const fig=document.createElement('figure');
+    const cv=document.createElement('canvas'); cv.width=220; cv.height=220;
+    const cap=document.createElement('figcaption'); cap.innerHTML='<b>wg'+i+'</b><span id="mg'+i+'">–</span>';
+    fig.appendChild(cv); fig.appendChild(cap); m.appendChild(fig); MINI.push(cv.getContext('2d'));
+    fig.onclick=()=>openLupe(i); } }
+function openLupe(i){ zoomI=i; lupePh=0; document.getElementById('lupeNm').textContent='wg'+i; document.getElementById('lupe').hidden=false; }
+function closeLupe(){ zoomI=-1; document.getElementById('lupe').hidden=true; }
+function setLupeModus(m){ lupeModus=m; lupePh=0;
+  document.getElementById('lLive').className='modusb'+(m==='live'?' an':'');
+  document.getElementById('lPlay').className='modusb'+(m==='player'?' an':''); }
+function gWelt(ctx2, W, g){                               // Boden + Gitter + Nester (wie Hauptseite)
+  const pad=Math.max(6,W*0.035), Sg=(g&&g.Sg)||50, sp2=(W-2*pad)/Sg;
+  ctx2.fillStyle=col('--boden'); ctx2.fillRect(0,0,W,W);
+  ctx2.strokeStyle=col('--linie'); ctx2.lineWidth=1; ctx2.strokeRect(pad,pad,W-2*pad,W-2*pad);
+  ctx2.globalAlpha=.5;
+  for(let gx=5;gx<Sg;gx+=5){ ctx2.beginPath(); ctx2.moveTo(pad+gx*sp2,pad); ctx2.lineTo(pad+gx*sp2,W-pad); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(pad,pad+gx*sp2); ctx2.lineTo(W-pad,pad+gx*sp2); ctx2.stroke(); }
+  ctx2.globalAlpha=1;
+  if(g&&g.nest){ ctx2.fillStyle=col('--erde'); ctx2.globalAlpha=0.09;
+    for(const n of g.nest){ ctx2.beginPath(); ctx2.arc(pad+n[0]*sp2,pad+n[1]*sp2,sp2*1.5,0,7); ctx2.fill(); } ctx2.globalAlpha=1; }
+  return {pad,Sg,sp2};
+}
+function gSpurKopf(ctx2, geo, trailPts, head, lab){       // Schlangen-Spur + Kopf mit Tiefe (+ Zahl graviert)
+  const {pad,Sg,sp2}=geo, gc=col('--gross');
+  if(trailPts&&trailPts.length){ ctx2.strokeStyle=gc; ctx2.lineWidth=Math.max(1.8,sp2*0.9); ctx2.lineCap='round'; ctx2.lineJoin='round'; ctx2.setLineDash([8,4,2,4]);
+    ctx2.beginPath(); let stt=false,pv=null;
+    for(const p of trailPts){ const x=pad+p[0]*sp2,y=pad+p[1]*sp2;
+      if(pv && Math.hypot(p[0]-pv[0],p[1]-pv[1])>8) stt=false;
+      if(!stt){ctx2.moveTo(x,y);stt=true;} else ctx2.lineTo(x,y); pv=p; }
+    ctx2.stroke(); ctx2.setLineDash([]); }
+  const tiefe=0.5+0.9*((head[2]||0)/Sg), r=Math.max(sp2*(0.7+0.55*tiefe), geo.pad*0.6, lab?8:0), px=pad+head[0]*sp2, py=pad+head[1]*sp2;
+  ctx2.globalAlpha=0.18; ctx2.fillStyle=gc; ctx2.beginPath(); ctx2.arc(px,py,r*2.0,0,7); ctx2.fill();  // Glüh-Hof -> in klein besser sichtbar
+  ctx2.globalAlpha=1; ctx2.beginPath(); ctx2.arc(px,py,r,0,7); ctx2.fill();
+  ctx2.lineWidth=1.2; ctx2.strokeStyle=col('--boden'); ctx2.stroke();
+  if(lab){ ctx2.fillStyle='#151210'; ctx2.font='800 '+Math.round(r*1.15)+'px ui-monospace,Menlo,monospace';  // Zahl in den Kopf = wgN
+    ctx2.textAlign='center'; ctx2.textBaseline='middle'; ctx2.fillText(lab, px, py+0.5); }
+}
+function zeichneGross(ctx2, W, g, lab){                   // LIVE: aktuelle Position
+  const geo=gWelt(ctx2,W,g); if(!g||!g.p) return; gSpurKopf(ctx2,geo,g.trail,g.disp||g.p, lab); }
+function zeichneGrossReplay(ctx2, W, g, ph, lab){         // PLAYER: Zeitraffer durch den gesammelten Verlauf
+  const geo=gWelt(ctx2,W,g); const h=g&&g.hist; if(!h||h.length<2) return;
+  const n=h.length, a=Math.min(Math.floor(ph),n-1), b=Math.min(a+1,n-1), f=ph-a;
+  const head=[lerp(h[a][0],h[b][0],f),lerp(h[a][1],h[b][1],f),lerp(h[a][2],h[b][2],f)];
+  gSpurKopf(ctx2,geo,h.slice(Math.max(0,a-12),a+1),head, lab); }
+async function pollGross(){
+  for(let i=0;i<8;i++){ try{
+    const r=await fetch('gross_'+i+'.json?_='+Date.now(),{cache:'no-store'}); const j=await r.json();
+    if(!GROSS[i]) GROSS[i]={disp:j.p.slice(),hist:[]};
+    GROSS[i].p=j.p; GROSS[i].trail=j.trail; GROSS[i].nest=j.nest; GROSS[i].Sg=j.S; GROSS[i].gain=j.gain;
+    if(!GROSS[i].hist) GROSS[i].hist=[];                                  // Verlauf mitsammeln -> Player/Zeitraffer
+    if(GROSS[i].histT!==j.t){ GROSS[i].hist.push(j.p); if(GROSS[i].hist.length>400) GROSS[i].hist.shift(); GROSS[i].histT=j.t; }
+    const el=document.getElementById('mg'+i); if(el) el.textContent=(j.gain!=null?'gain '+j.gain.toFixed(2):'–');
+  }catch(e){} } }
+function drawMini(){ for(let i=0;i<8;i++){ if(MINI[i]) zeichneGross(MINI[i],220,GROSS[i], String(i)); } }
+function setStatus(paused){                              // Sicherheitsanker: LIVE <-> Pause/Baustelle
+  if(paused===lastPaused) return; lastPaused=paused;
+  const pulse=document.querySelector('.eyebrow .pulse'), stand=document.getElementById('stand'), ban=document.getElementById('pause');
+  if(paused){ if(pulse)pulse.classList.add('pause'); if(stand)stand.textContent='⏸ Server pausiert';
+    if(ban){ ban.hidden=false; ban.innerHTML = FRAMES.length
+      ? '⏸ <b>Server pausiert</b> — du siehst grad die letzte Aufnahme im Replay. Kommt gleich wieder live.'
+      : '🚧 <b>Baustelle</b> — der Server ist grad nicht erreichbar. Gleich wieder da.'; } }
+  else{ if(pulse)pulse.classList.remove('pause'); if(stand)stand.textContent='verbunden'; if(ban)ban.hidden=true; }
+}
+function anim(ts){
+  const dt=Math.min(0.1,(ts-last)/1000||0); last=ts;
+  const stale = lastAdvanceWall>0 && (performance.now()-lastAdvanceWall > 12000);
+  const paused = (!netOk) || stale; setStatus(paused);
+  if(FRAMES.length){
+    const newest=FRAMES[FRAMES.length-1].t, oldest=FRAMES[0].t;
+    if(playT==null) playT=newest;
+    if(paused || MODUS==='player'){                      // Pause ODER Player -> ZEITRAFFER-Replay der letzten Aufnahme
+      playT += dt*((newest-oldest)/LOOP_SEK);
+      if(playT>=newest || playT<oldest) playT=oldest;
+    } else {                                             // LIVE 1:1: sanft der Live-Kante folgen
+      const kante=Math.max(oldest, newest-2);
+      playT += (kante-playT)*Math.min(1, dt*rate*0.35);
+      if(playT<oldest) playT=oldest;
+    }
+    draw();
+  } else if(paused){                                     // keine Daten + Pause -> Platzhalter statt schwarzem Feld
+    const W=c.width,H=c.height,pad=26,sp=(W-2*pad)/S;
+    ctx.fillStyle=col('--boden'); ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle=col('--linie'); ctx.lineWidth=1; ctx.strokeRect(pad,pad,S*sp,S*sp);
+    ctx.fillStyle=col('--leise'); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='600 22px system-ui,-apple-system,sans-serif'; ctx.fillText('🚧 Baustelle', W/2, H/2-14);
+    ctx.font='400 15px system-ui,-apple-system,sans-serif'; ctx.fillText('Server macht grad Pause — gleich wieder da.', W/2, H/2+16);
+  }
+  for(const g of GROSS){ if(g&&g.p){ if(!g.disp)g.disp=g.p.slice(); for(let k=0;k<3;k++) g.disp[k]+=(g.p[k]-g.disp[k])*Math.min(1,dt*3); } }
+  drawMini();
+  if(zoomI>=0 && lupeCtx){ const g=GROSS[zoomI];                       // Großansicht: Live oder Zeitraffer
+    if(lupeModus==='player' && g && g.hist && g.hist.length>1){ lupePh+=dt*(g.hist.length/LOOP_SEK); if(lupePh>=g.hist.length-1) lupePh=0; zeichneGrossReplay(lupeCtx,560,g,lupePh, String(zoomI)); }
+    else zeichneGross(lupeCtx,560,g, String(zoomI));
+    document.getElementById('lupeGain').textContent=(g&&g.gain!=null?'gain '+g.gain.toFixed(2):'–'); }
+  requestAnimationFrame(anim);
+}
+matchMedia('(prefers-reduced-motion:reduce)').matches && (rate=0);
+document.getElementById('loadt').textContent=new Date().toLocaleTimeString();  // beweist: frisch geladen = neue Version
+baueMini();
+lupeCtx=document.getElementById('lupeC').getContext('2d');
+document.getElementById('lupe').onclick=closeLupe;                    // Klick auf Hintergrund schließt
+document.querySelector('.lupe-box').onclick=e=>e.stopPropagation();   // Klick aufs Bild NICHT
+document.getElementById('lupeX').onclick=closeLupe;
+document.getElementById('lLive').onclick=()=>setLupeModus('live');
+document.getElementById('lPlay').onclick=()=>setLupeModus('player');
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeLupe(); });
+function setModus(m){ MODUS=m; playT=null;
+  document.getElementById('mLive').className='modusb'+(m==='live'?' an':'');
+  document.getElementById('mPlay').className='modusb'+(m==='player'?' an':'');
+  document.getElementById('modushint').innerHTML = m==='live'
+    ? 'echt ~1 Runde/s · <a href="ein_wurm.html" style="color:var(--akzent)">ein Wurm →</a> · <a href="landkarte.html" style="color:var(--akzent)">Spuren →</a> · <a href="verlauf.html" style="color:var(--akzent)">Verlauf →</a>'
+    : 'Zeitraffer: die Aufnahme im Schnelldurchlauf als Schleife — kein Live';
+}
+document.getElementById('mLive').onclick=()=>setModus('live');
+document.getElementById('mPlay').onclick=()=>setModus('player');
+(async()=>{ await ladeErde(); await poll(); await pollGross(); requestAnimationFrame(anim); setInterval(poll, 2000); setInterval(pollGross, 2000);
+  const mz=location.hash.match(/z(\d)(p)?/); if(mz){ openLupe(+mz[1]); if(mz[2]) setLupeModus('player'); }   // #z3 öffnet wg3, #z3p im Player
+})();
+</script>
